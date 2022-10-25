@@ -6,12 +6,19 @@
  * Licensed under the MIT License.
  */
 
-import { Activity, ActivityTypes, BotAdapter, TurnContext, ConversationReference, ResourceResponse } from 'botbuilder';
-import * as Debug from 'debug';
-import { FacebookBotWorker } from './botworker';
-import { FacebookAPI } from './facebook_api';
-import * as crypto from 'crypto';
-const debug = Debug('botkit:facebook');
+import {
+    Activity,
+    ActivityTypes,
+    BotAdapter,
+    TurnContext,
+    ConversationReference,
+    ResourceResponse,
+} from "botbuilder";
+import * as Debug from "debug";
+import { FacebookBotWorker } from "./botworker";
+import { FacebookAPI } from "./facebook_api";
+import * as crypto from "crypto";
+const debug = Debug("botkit:facebook");
 
 /**
  * Connect [Botkit](https://www.npmjs.com/package/botkit) or [BotBuilder](https://www.npmjs.com/package/botbuilder) to Facebook Messenger.
@@ -21,7 +28,7 @@ export class FacebookAdapter extends BotAdapter {
      * Name used by Botkit plugin loader
      * @ignore
      */
-    public name = 'Facebook Adapter';
+    public name = "Facebook Adapter";
 
     /**
      * Object containing one or more Botkit middlewares to bind automatically.
@@ -95,13 +102,14 @@ export class FacebookAdapter extends BotAdapter {
         super();
 
         this.options = {
-            api_host: 'graph.facebook.com',
-            api_version: 'v3.2',
-            ...options
+            api_host: "graph.facebook.com",
+            api_version: "v3.2",
+            ...options,
         };
 
         if (!this.options.access_token && !this.options.getAccessTokenForPage) {
-            const err = 'Adapter must receive either an access_token or a getAccessTokenForPage function.';
+            const err =
+                "Adapter must receive either an access_token or a getAccessTokenForPage function.";
             if (!this.options.enable_incomplete) {
                 throw new Error(err);
             } else {
@@ -110,7 +118,8 @@ export class FacebookAdapter extends BotAdapter {
         }
 
         if (!this.options.app_secret) {
-            const err = 'Provide an app_secret in order to validate incoming webhooks and better secure api requests';
+            const err =
+                "Provide an app_secret in order to validate incoming webhooks and better secure api requests";
             if (!this.options.enable_incomplete) {
                 throw new Error(err);
             } else {
@@ -120,24 +129,24 @@ export class FacebookAdapter extends BotAdapter {
 
         if (this.options.enable_incomplete) {
             const warning = [
-                '',
-                '****************************************************************************************',
-                '* WARNING: Your adapter may be running with an incomplete/unsafe configuration.        *',
-                '* - Ensure all required configuration options are present                              *',
+                "",
+                "****************************************************************************************",
+                "* WARNING: Your adapter may be running with an incomplete/unsafe configuration.        *",
+                "* - Ensure all required configuration options are present                              *",
                 '* - Disable the "enable_incomplete" option!                                            *',
-                '****************************************************************************************',
-                ''
+                "****************************************************************************************",
+                "",
             ];
-            console.warn(warning.join('\n'));
+            console.warn(warning.join("\n"));
         }
 
         this.middlewares = {
             spawn: [
                 async (bot, next): Promise<void> => {
-                    bot.api = await this.getAPI(bot.getConfig('activity'));
+                    bot.api = await this.getAPI(bot.getConfig("activity"));
                     next();
-                }
-            ]
+                },
+            ],
         };
     }
 
@@ -147,17 +156,26 @@ export class FacebookAdapter extends BotAdapter {
      * @param botkit
      */
     public async init(botkit): Promise<any> {
-        debug('Add GET webhook endpoint for verification at: ', botkit.getConfig('webhook_uri'));
+        debug(
+            "Add GET webhook endpoint for verification at: ",
+            botkit.getConfig("webhook_uri")
+        );
         if (botkit.webserver) {
-            botkit.webserver.get(botkit.getConfig('webhook_uri'), (req, res) => {
-                if (req.query['hub.mode'] === 'subscribe') {
-                    if (req.query['hub.verify_token'] === this.options.verify_token) {
-                        res.send(req.query['hub.challenge']);
-                    } else {
-                        res.send('OK');
+            botkit.webserver.get(
+                botkit.getConfig("webhook_uri"),
+                (req, res) => {
+                    if (req.query["hub.mode"] === "subscribe") {
+                        if (
+                            req.query["hub.verify_token"] ===
+                            this.options.verify_token
+                        ) {
+                            res.send(req.query["hub.challenge"]);
+                        } else {
+                            res.send("OK");
+                        }
                     }
                 }
-            });
+            );
         }
     }
 
@@ -173,22 +191,36 @@ export class FacebookAdapter extends BotAdapter {
      */
     public async getAPI(activity: Partial<Activity>): Promise<FacebookAPI> {
         if (this.options.access_token) {
-            return new FacebookAPI(this.options.access_token, this.options.app_secret, this.options.api_host, this.options.api_version);
+            return new FacebookAPI(
+                this.options.access_token,
+                this.options.app_secret,
+                this.options.api_host,
+                this.options.api_version
+            );
         } else {
             if (activity.recipient.id) {
                 let pageid = activity.recipient.id;
                 // if this is an echo, the page id is actually in the from field
-                if (activity.channelData && activity.channelData.message && activity.channelData.message.is_echo === true) {
+                if (
+                    activity.channelData &&
+                    activity.channelData.message &&
+                    activity.channelData.message.is_echo === true
+                ) {
                     pageid = activity.from.id;
                 }
                 const token = await this.options.getAccessTokenForPage(pageid);
                 if (!token) {
-                    throw new Error('Missing credentials for page.');
+                    throw new Error("Missing credentials for page.");
                 }
-                return new FacebookAPI(token, this.options.app_secret, this.options.api_host, this.options.api_version);
+                return new FacebookAPI(
+                    token,
+                    this.options.app_secret,
+                    this.options.api_host,
+                    this.options.api_version
+                );
             } else {
                 // No API can be created, this is
-                debug('Unable to create API based on activity: ', activity);
+                debug("Unable to create API based on activity: ", activity);
             }
         }
     }
@@ -200,19 +232,19 @@ export class FacebookAdapter extends BotAdapter {
     private activityToFacebook(activity: any): any {
         const message = {
             recipient: {
-                id: activity.conversation.id
+                id: activity.conversation.id,
             },
             message: {
                 text: activity.text,
                 sticker_id: undefined,
                 attachment: undefined,
-                quick_replies: undefined
+                quick_replies: undefined,
             },
-            messaging_type: 'RESPONSE',
+            messaging_type: "RESPONSE",
             tag: undefined,
             notification_type: undefined,
             persona_id: undefined,
-            sender_action: undefined
+            sender_action: undefined,
         };
 
         // map these fields to their appropriate place
@@ -238,7 +270,8 @@ export class FacebookAdapter extends BotAdapter {
             }
 
             if (activity.channelData.notification_type) {
-                message.notification_type = activity.channelData.notification_type;
+                message.notification_type =
+                    activity.channelData.notification_type;
             }
 
             if (activity.channelData.sender_action) {
@@ -247,20 +280,22 @@ export class FacebookAdapter extends BotAdapter {
                 // from docs: https://developers.facebook.com/docs/messenger-platform/reference/send-api/
                 // Cannot be sent with message. Must be sent as a separate request.
                 // When using sender_action, recipient should be the only other property set in the request.
-                delete (message.message);
+                delete message.message;
             }
 
             // make sure the quick reply has a type
             if (activity.channelData.quick_replies) {
-                message.message.quick_replies = activity.channelData.quick_replies.map(function(item) {
-                    const quick_reply = { ...item };
-                    if (!item.content_type) quick_reply.content_type = 'text';
-                    return quick_reply;
-                });
+                message.message.quick_replies =
+                    activity.channelData.quick_replies.map(function (item) {
+                        const quick_reply = { ...item };
+                        if (!item.content_type)
+                            quick_reply.content_type = "text";
+                        return quick_reply;
+                    });
             }
         }
 
-        debug('OUT TO FACEBOOK > ', message);
+        debug("OUT TO FACEBOOK > ", message);
 
         return message;
     }
@@ -271,7 +306,10 @@ export class FacebookAdapter extends BotAdapter {
      * @param context A TurnContext representing the current incoming message and environment.
      * @param activities An array of outgoing activities to be sent back to the messaging API.
      */
-    public async sendActivities(context: TurnContext, activities: Partial<Activity>[]): Promise<ResourceResponse[]> {
+    public async sendActivities(
+        context: TurnContext,
+        activities: Partial<Activity>[]
+    ): Promise<ResourceResponse[]> {
         const responses = [];
         for (let a = 0; a < activities.length; a++) {
             const activity = activities[a];
@@ -279,17 +317,24 @@ export class FacebookAdapter extends BotAdapter {
                 const message = this.activityToFacebook(activity);
                 try {
                     const api = await this.getAPI(context.activity);
-                    const res = await api.callAPI('/me/messages', 'POST', message);
+                    const res = await api.callAPI(
+                        "/me/messages",
+                        "POST",
+                        message
+                    );
                     if (res) {
                         responses.push({ id: res.message_id });
                     }
-                    debug('RESPONSE FROM FACEBOOK > ', res);
+                    debug("RESPONSE FROM FACEBOOK > ", res);
                 } catch (err) {
-                    console.error('Error sending activity to Facebook:', err);
+                    console.error("Error sending activity to Facebook:", err);
                 }
             } else {
                 // If there are ever any non-message type events that need to be sent, do it here.
-                debug('Unknown message type encountered in sendActivities: ', activity.type);
+                debug(
+                    "Unknown message type encountered in sendActivities: ",
+                    activity.type
+                );
             }
         }
 
@@ -301,8 +346,11 @@ export class FacebookAdapter extends BotAdapter {
      * @ignore
      */
     // eslint-disable-next-line
-    public async updateActivity(context: TurnContext, activity: Partial<Activity>): Promise<void> {
-        debug('Facebook adapter does not support updateActivity.');
+    public async updateActivity(
+        context: TurnContext,
+        activity: Partial<Activity>
+    ): Promise<void> {
+        debug("Facebook adapter does not support updateActivity.");
     }
 
     /**
@@ -310,8 +358,11 @@ export class FacebookAdapter extends BotAdapter {
      * @ignore
      */
     // eslint-disable-next-line
-     public async deleteActivity(context: TurnContext, reference: Partial<ConversationReference>): Promise<void> {
-        debug('Facebook adapter does not support deleteActivity.');
+    public async deleteActivity(
+        context: TurnContext,
+        reference: Partial<ConversationReference>
+    ): Promise<void> {
+        debug("Facebook adapter does not support deleteActivity.");
     }
 
     /**
@@ -320,9 +371,12 @@ export class FacebookAdapter extends BotAdapter {
      * @param reference A conversation reference to be applied to future messages.
      * @param logic A bot logic function that will perform continuing action in the form `async(context) => { ... }`
      */
-    public async continueConversation(reference: Partial<ConversationReference>, logic: (context: TurnContext) => Promise<void>): Promise<void> {
+    public async continueConversation(
+        reference: Partial<ConversationReference>,
+        logic: (context: TurnContext) => Promise<void>
+    ): Promise<void> {
         const request = TurnContext.applyConversationReference(
-            { type: 'event', name: 'continueConversation' },
+            { type: "event", name: "continueConversation" },
             reference,
             true
         );
@@ -337,36 +391,54 @@ export class FacebookAdapter extends BotAdapter {
      * @param res A response object from Restify or Express
      * @param logic A bot logic function in the form `async(context) => { ... }`
      */
-    public async processActivity(req, res, logic: (context: TurnContext) => Promise<void>): Promise<void> {
-        debug('IN FROM FACEBOOK >', req.body);
-        if (await this.verifySignature(req, res) === true) {
+    public async processActivity(
+        req,
+        res,
+        logic: (context: TurnContext) => Promise<void>
+    ): Promise<void> {
+        debug("IN FROM FACEBOOK >", req.body);
+        if ((await this.verifySignature(req, res)) === true) {
             const event = req.body;
             if (event.entry) {
                 for (let e = 0; e < event.entry.length; e++) {
                     let payload = null;
+                    let eventType = "";
+
                     const entry = event.entry[e];
 
                     // handle normal incoming stuff
+
                     if (entry.changes) {
                         payload = entry.changes;
+                        eventType = "changes";
                     } else if (entry.messaging) {
                         payload = entry.messaging;
-                    }
-
-                    for (let m = 0; m < payload.length; m++) {
-                        await this.processSingleMessage(payload[m], logic);
-                    }
-
-                    // handle standby messages (this bot is not the active receiver)
-                    if (entry.standby) {
+                        eventType = "messaging";
+                    } else if (entry.standby) {
                         payload = entry.standby;
+                        eventType = "standby";
+                    }
 
-                        for (let m = 0; m < payload.length; m++) {
-                            const message = payload[m];
-                            // indiciate that this message was received in standby mode rather than normal mode.
-                            message.standby = true;
-                            await this.processSingleMessage(message, logic);
-                        }
+                    switch (eventType) {
+                        case "changes":
+                        case "messaging":
+                            for (let m = 0; m < payload.length; m++) {
+                                await this.processSingleMessage(
+                                    payload[m],
+                                    logic
+                                );
+                            }
+                            break;
+                        case "standby":
+                            for (let m = 0; m < payload.length; m++) {
+                                const message = payload[m];
+                                // indiciate that this message was received in standby mode rather than normal mode.
+                                message.standby = true;
+                                await this.processSingleMessage(message, logic);
+                            }
+                            break;
+                        default:
+                            break;
                     }
                 }
 
@@ -381,30 +453,33 @@ export class FacebookAdapter extends BotAdapter {
      * @param message
      * @param logic
      */
-    private async processSingleMessage(message: any, logic: any): Promise<void> {
+    private async processSingleMessage(
+        message: any,
+        logic: any
+    ): Promise<void> {
         //  in case of Checkbox Plug-in sender.id is not present, instead we should look at optin.user_ref
         if (!message.sender && message.optin && message.optin.user_ref) {
             message.sender = { id: message.optin.user_ref };
         }
 
         const activity: Activity = {
-            channelId: 'facebook',
+            channelId: "facebook",
             timestamp: new Date(),
             // @ts-ignore ignore missing optional fields
             conversation: {
-                id: message.sender.id
+                id: message.sender.id,
             },
             from: {
                 id: message.sender.id,
-                name: message.sender.id
+                name: message.sender.id,
             },
             recipient: {
                 id: message.recipient.id,
-                name: message.recipient.id
+                name: message.recipient.id,
             },
             channelData: message,
             type: ActivityTypes.Event,
-            text: null
+            text: null,
         };
 
         if (message.message) {
@@ -433,14 +508,14 @@ export class FacebookAdapter extends BotAdapter {
      * Will abort parsing if signature is invalid, and pass a generic error to response
      */
     private async verifySignature(req, res): Promise<boolean> {
-        const expected = req.headers['x-hub-signature'];
-        const hmac = crypto.createHmac('sha1', this.options.app_secret);
-        hmac.update(req.rawBody, 'utf8');
-        const calculated = 'sha1=' + hmac.digest('hex');
+        const expected = req.headers["x-hub-signature"];
+        const hmac = crypto.createHmac("sha1", this.options.app_secret);
+        hmac.update(req.rawBody, "utf8");
+        const calculated = "sha1=" + hmac.digest("hex");
         if (expected !== calculated) {
             res.status(401);
-            debug('Token verification failed, Ignoring message');
-            throw new Error('Invalid signature on incoming request');
+            debug("Token verification failed, Ignoring message");
+            throw new Error("Invalid signature on incoming request");
         } else {
             return true;
         }
